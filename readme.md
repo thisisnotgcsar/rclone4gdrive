@@ -30,7 +30,9 @@ Seamless, automated, and transparent two-way Google Drive backup for Linux.
 
 ## Overview
 
-rclone4gdrive is a rclone wrapper for Google Drive two-way synchronization. This is typically used for Cloud backup purposes. 
+rclone4gdrive is a rclone wrapper for Google Drive two-way synchronization. This is typically used for Cloud backup purposes.
+
+Your `~/gdrive/` directory acts as a real-time view of your Google Drive root directory. Any files you add, modify, or delete in `~/gdrive/` are transparently synchronized to Google Drive, and changes made on Google Drive are automatically synced back to your local directory. 
 
 rclone4gdrive automates common rclone operations and error handling to give the user a "set-up and forget" experience for filesystem-aware cloud backup. It solves a very boring but important issue in the Linux open-source cloud backup space: setting up and automating a seamless and transparent cloud backup of files directly from the Linux filesystem, with minimal manual intervention.
 
@@ -85,6 +87,8 @@ rclone4gdrive automates common rclone operations and error handling to give the 
 	Once installation is complete, rclone4gdrive will start its execution and begin backing up and downloading files from Google Drive into your `$HOME/gdrive/` directory.
 
 ## Usage
+> Your `~/gdrive/` directory is effectively a real-time view of your Google Drive root directory. Everything inserted, modified, or deleted within `~/gdrive/` will be transparently synchronized to your configured Google Drive location. This works both ways—changes made on Google Drive will also sync back to your local `~/gdrive/` directory.
+
 After installation, you can use the following commands:
 ```sh
 rclone4gdrive status        # Show sync and service status 
@@ -93,7 +97,7 @@ rclone4gdrive dry-run       # Test sync without making changes
 rclone4gdrive sync-daemons  # Reinstall and enable systemd units
 rclone4gdrive init          # (Re)initialize everything
 ```
-The systemd timer will run regular syncs. If a failure is detected (e.g., token expired), the fail handler will attempt recovery and refresh the token automatically and transparently.
+
 
 ## Directory Structure
 - `rclone4gdrive`           : Main script/entrypoint
