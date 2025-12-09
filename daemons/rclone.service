@@ -1,0 +1,15 @@
+[Unit]
+Description=Rclone sync with Google Drive
+After=network-online.target
+OnFailure=rclone-fail.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rclone bisync gdrive: %h/gdrive/ --min-size 0 --log-level=ERROR
+# Ensure systemd considers non-zero exit as a failure
+SuccessExitStatus=0
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

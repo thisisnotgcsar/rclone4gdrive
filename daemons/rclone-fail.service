@@ -1,0 +1,9 @@
+[Unit]
+Description=Handle rclone failure
+
+[Service]
+Type=oneshot
+# Call the handler script which inspects the recent journal, attempts recovery, and restarts the timer if possible using rclone4gdrive.
+ExecStart=%h/bin/rclone4gdrive/rclone-fail-handler.sh
+StandardOutput=journal
+StandardError=journal

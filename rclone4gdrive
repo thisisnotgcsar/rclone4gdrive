@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+
+# rclone4gdrive
+# Purpose: Manage rclone timer/service operations for Google Drive synchronization.
+# Features:
+#   - Provides status and restart commands for rclone systemd units.
+#   - Supports dry-run bisync operations.
+#   - Installs and enables systemd user units from the daemons/ directory.
+#   - 'init' command sets up gdrive remote, ensures $HOME/gdrive exists, and copies the script directory for system-wide or user use.
+
+show_help() {
+  cat <<EOF
+Usage: $0 <command>
+
+Commands:
+  status         Show a compact summary of rclone.timer and the last 10 lines of the rclone.service journal
+  restart        Restart rclone.timer and show the updated status
+  dry-run        Run rclone bisync in dry-run mode
+  sync-daemons   Install service/timer unit files from daemons/ into ~/.config/systemd/user, reload and enable/start them
+  init           Initialize gdrive remote, ensure \$HOME/gdrive exists, and copy the script directory for deployment
+  help, -h, --help  Show this help message
+EOF
+}
+
+# --- Utility functions ---
+
+status_cmd() {
+  echo "== rclone.timer (compact) =="
+  systemctl --user status rclone.timer ||
+    echo "Timer unit rclone.timer not found or systemctl unavailable."
+
+  echo
+  echo "== rclone.service (last 10 lines) =="
+  # Show only last 10 journal lines for quick inspection
+  journalctl --user -u rclone.service -n 10 --no-pager 2>/dev/null || {
+    echo "No journal entries found for rclone.service or journalctl unavailable."
+  }
+}
+
+restart_cmd() {
+  echo "Restarting rclone.timer..."
+  if systemctl --user restart rclone.timer 2>/dev/null; then
+    echo "Timer restarted successfully."
+  else
+    echo "Failed to restart rclone.timer (check permissions or unit existence)."
+  fi
+  echo "Starting rclone.service immediately..."
+  if systemctl --user start rclone.service 2>/dev/null; then
+    echo "Service started successfully."
+  else
+    echo "Failed to start rclone.service (check permissions or unit existence)."
+  fi
+}
+
+dry_run_cmd() {
+  echo "Running rclone bisync in dry-run mode..."
+  # Keep the same invocation as before but add --dry-run for safety
+  /usr/bin/rclone bisync gdrive: $HOME/gdrive --min-size 0 --log-level=ERROR --dry-run
+}
+
+sync_daemons_cmd() {
+  # Install unit files from the script's daemons/ directory into the user's systemd unit dir,
+  # reload systemd, then enable & start each unit.
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  DAEMONS_DIR="$SCRIPT_DIR/daemons"
+  TARGET_DIR="$HOME/.config/systemd/user"
+
+  if [[ ! -d "$DAEMONS_DIR" ]]; then
+    echo "Daemons directory not found: $DAEMONS_DIR"
+    return 1
+  fi
+
+  mkdir -p "$TARGET_DIR"
+
+  # Collect .service and .timer files (nullglob so no-lists produce empty array)
+  shopt -s nullglob
+  units=( "$DAEMONS_DIR"/*.service "$DAEMONS_DIR"/*.timer )
+  shopt -u nullglob
+
+  if [[ ${#units[@]} -eq 0 ]]; then
+    echo "No .service or .timer files found in $DAEMONS_DIR"
+    return 1
+  fi
+
+  echo "Copying ${#units[@]} unit(s) to $TARGET_DIR..."
+  for f in "${units[@]}"; do
+    cp -a -- "$f" "$TARGET_DIR/" || {
+      echo "Failed to copy: $f"
+    }
+  done
+
+  echo "Reloading user systemd daemon..."
+  if ! systemctl --user daemon-reload 2>/dev/null; then
+    echo "Warning: daemon-reload failed or systemctl --user unavailable in this environment."
+  fi
+
+  echo "Enabling and starting timer units only..."
+  for f in "${units[@]}"; do
+    unit="$(basename "$f")"
+    if [[ "$unit" == *.timer ]]; then
+      if systemctl --user enable --now "$unit" 2>/dev/null; then
+        echo "Enabled & started: $unit"
+      else
+        echo "Could not enable/start: $unit (you may need to run this from your user session)"
+      fi
+    fi
+  done
+}
+
+init_cmd() {
+  # Check if $HOME/gdrive exists and 'gdrive' remote is present in rclone
+  if [ -d "$HOME/gdrive" ] && rclone listremotes | grep -q '^gdrive:'; then
+    echo "$HOME/gdrive exists and 'gdrive' remote found in rclone. Skipping rclone initialization."
+  else
+    echo "Initializing gdrive rclone instance under $HOME/gdrive..."
+    mkdir -p "$HOME/gdrive"
+    rclone config create gdrive drive || { echo "rclone config failed. Aborting init."; exit 1; }
+  fi
+
+  # Copy the current script directory to ~/bin
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  TARGET_BIN="$HOME/bin/"
+  mkdir -p "$TARGET_BIN"
+  echo "Copying $SCRIPT_DIR to $TARGET_BIN ..."
+  cp -a "$SCRIPT_DIR" "$TARGET_BIN"
+
+  # Add ~/bin/rclone4gdrive to PATH in ~/.bashrc if not already present
+  BASHRC="$HOME/.bashrc"
+  PATH_LINE='export PATH="$HOME/bin/rclone4gdrive:$PATH"'
+  if ! grep -Fxq "$PATH_LINE" "$BASHRC"; then
+    echo "$PATH_LINE" >> "$BASHRC"
+    echo "Added $PATH_LINE to $BASHRC. Run: source $BASHRC to update your PATH."
+  else
+    echo "$PATH_LINE already present in $BASHRC."
+  fi
+
+  sync_daemons_cmd
+  restart_cmd
+}
+
+# --- Main argument parsing ---
+
+if [[ $# -lt 1 ]]; then
+  show_help
+  exit 1
+fi
+
+COMMAND=$1
+# Transform the command to lowercase for case-insensitive matching
+COMMAND=$(echo "$COMMAND" | tr '[:upper:]' '[:lower:]')
+
+case "$COMMAND" in
+  status)
+    status_cmd
+    ;;
+
+  restart)
+    restart_cmd
+    ;;
+
+  dry-run)
+    dry_run_cmd
+    ;;
+
+  sync-daemons)
+    sync_daemons_cmd
+    ;;
+
+  init)
+    init_cmd
+    ;;
+
+  help|-h|--help)
+    show_help
+    ;;
+
+  *)
+    echo "Unknown command: $COMMAND"
+    show_help
+    exit 1
+    ;;
+esac
