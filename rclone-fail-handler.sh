@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
 
 # rclone-fail-handler.sh
 # 
@@ -11,7 +10,7 @@ set -euo pipefail
 # Function to restart the rclone.timer and service using the rclone4gdrive helper script.
 restart_services() {
   echo "Restarting rclone.timer and service via rclone4gdrive..."
-  "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rclone4gdrive" restart || {
+  `dirname "$0"`/rclone4gdrive restart || {
     echo "Failed to restart rclone.timer/service automatically. Please run manually."
     exit 1
   }
@@ -23,12 +22,12 @@ restart_services() {
 systemctl --user stop rclone.timer || true
 
 # Collect recent journal lines for the rclone service (last 10 lines).
-JOURNAL_OUTPUT=$(journalctl --user -u rclone.service -n 10 --no-pager 2>/dev/null || true)
+JOURNAL_OUTPUT=`journalctl --user -u rclone.service -n 10 --no-pager 2>/dev/null || true`
 
 # --- OAuth/token error handling block ---
 if echo "$JOURNAL_OUTPUT" | grep -E -q "couldn't fetch token|invalid_grant|Token has been expired or revoked|couldn't find root directory ID"; then
   echo "Detected invalid token in logs. Attempting refresh..."
-  if "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/refresh_token.sh"; then
+  if `dirname "$0"`/refresh_token.sh; then
     restart_services
   else
     echo "refresh token failed."

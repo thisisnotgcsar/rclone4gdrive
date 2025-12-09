@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # rclone4gdrive
 # Purpose: Manage rclone timer/service operations for Google Drive synchronization.
@@ -54,61 +54,58 @@ restart_cmd() {
 
 dry_run_cmd() {
   echo "Running rclone bisync in dry-run mode..."
-  # Keep the same invocation as before but add --dry-run for safety
-  /usr/bin/rclone bisync gdrive: $HOME/gdrive --min-size 0 --log-level=ERROR --dry-run
+  /usr/bin/rclone bisync gdrive: "$HOME/gdrive" --min-size 0 --log-level=ERROR --dry-run
 }
 
 sync_daemons_cmd() {
-  # Install unit files from the script's daemons/ directory into the user's systemd unit dir,
-  # reload systemd, then enable & start each unit.
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  SCRIPT_DIR=`dirname "$0"`
   DAEMONS_DIR="$SCRIPT_DIR/daemons"
   TARGET_DIR="$HOME/.config/systemd/user"
 
-  if [[ ! -d "$DAEMONS_DIR" ]]; then
+  if [ ! -d "$DAEMONS_DIR" ]; then
     echo "Daemons directory not found: $DAEMONS_DIR"
     return 1
   fi
 
   mkdir -p "$TARGET_DIR"
 
-  # Collect .service and .timer files (nullglob so no-lists produce empty array)
-  shopt -s nullglob
-  units=( "$DAEMONS_DIR"/*.service "$DAEMONS_DIR"/*.timer )
-  shopt -u nullglob
+  # Find .service and .timer files
+  units=""
+  for f in "$DAEMONS_DIR"/*.service "$DAEMONS_DIR"/*.timer; do
+    [ -e "$f" ] && units="$units $f"
+  done
 
-  if [[ ${#units[@]} -eq 0 ]]; then
+  if [ -z "$units" ]; then
     echo "No .service or .timer files found in $DAEMONS_DIR"
     return 1
   fi
 
-  echo "Copying ${#units[@]} unit(s) to $TARGET_DIR..."
-  for f in "${units[@]}"; do
-    cp -a -- "$f" "$TARGET_DIR/" || {
+  echo "Copying unit(s) to $TARGET_DIR..."
+  for f in $units; do
+    cp -a "$f" "$TARGET_DIR/" || {
       echo "Failed to copy: $f"
     }
   done
 
   echo "Reloading user systemd daemon..."
-  if ! systemctl --user daemon-reload 2>/dev/null; then
+  systemctl --user daemon-reload 2>/dev/null || {
     echo "Warning: daemon-reload failed or systemctl --user unavailable in this environment."
-  fi
+  }
 
   echo "Enabling and starting timer units only..."
-  for f in "${units[@]}"; do
-    unit="$(basename "$f")"
-    if [[ "$unit" == *.timer ]]; then
-      if systemctl --user enable --now "$unit" 2>/dev/null; then
-        echo "Enabled & started: $unit"
-      else
-        echo "Could not enable/start: $unit (you may need to run this from your user session)"
-      fi
-    fi
+  for f in $units; do
+    unit=`basename "$f"`
+    case "$unit" in
+      *.timer)
+        systemctl --user enable --now "$unit" 2>/dev/null && \
+          echo "Enabled & started: $unit" || \
+          echo "Could not enable/start: $unit (you may need to run this from your user session)"
+        ;;
+    esac
   done
 }
 
 init_cmd() {
-  # Check if $HOME/gdrive exists and 'gdrive' remote is present in rclone
   if [ -d "$HOME/gdrive" ] && rclone listremotes | grep -q '^gdrive:'; then
     echo "$HOME/gdrive exists and 'gdrive' remote found in rclone. Skipping rclone initialization."
   else
@@ -117,22 +114,18 @@ init_cmd() {
     rclone config create gdrive drive || { echo "rclone config failed. Aborting init."; exit 1; }
   fi
 
-  # Copy the current script directory to ~/bin
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  SCRIPT_DIR=`dirname "$0"`
   TARGET_BIN="$HOME/bin/"
   mkdir -p "$TARGET_BIN"
   echo "Copying $SCRIPT_DIR to $TARGET_BIN ..."
   cp -a "$SCRIPT_DIR" "$TARGET_BIN"
 
-  # Add ~/bin/rclone4gdrive to PATH in ~/.bashrc if not already present
   BASHRC="$HOME/.bashrc"
   PATH_LINE='export PATH="$HOME/bin/rclone4gdrive:$PATH"'
-  if ! grep -Fxq "$PATH_LINE" "$BASHRC"; then
+  grep -Fxq "$PATH_LINE" "$BASHRC" || {
     echo "$PATH_LINE" >> "$BASHRC"
     echo "Added $PATH_LINE to $BASHRC. Run: source $BASHRC to update your PATH."
-  else
-    echo "$PATH_LINE already present in $BASHRC."
-  fi
+  }
 
   sync_daemons_cmd
   restart_cmd
@@ -140,14 +133,13 @@ init_cmd() {
 
 # --- Main argument parsing ---
 
-if [[ $# -lt 1 ]]; then
+if [ $# -lt 1 ]; then
   show_help
   exit 1
 fi
 
 COMMAND=$1
-# Transform the command to lowercase for case-insensitive matching
-COMMAND=$(echo "$COMMAND" | tr '[:upper:]' '[:lower:]')
+COMMAND=`echo "$COMMAND" | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
 
 case "$COMMAND" in
   status)
