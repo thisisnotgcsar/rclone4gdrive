@@ -118,7 +118,7 @@ The **timer service** triggers the **sync service**, which runs rclone in bisync
 
 Robust error handling is built in: if a sync fails (e.g., due to an expired OAuth token or a required resync), a dedicated failure handler is triggered: `rclone-fail-handler.sh`. This handler inspects recent logs, detects known error patterns, and attempts automated recovery steps such as refreshing the OAuth token or running a resync. If recovery succeeds, the timer and service are restarted automatically; otherwise, the user is notified for manual intervention.
 
-OAuth token management is fully automated. The refresh script (`refresh_toke.sh`) extracts credentials from your rclone configuration, requests a new access token from Google, and updates the config file safely, with backup and rollback in case of errors. Token validity is verified by running a dry-run sync before finalizing changes.
+OAuth token management is fully automated. The refresh script (`refresh_token.sh`) extracts credentials from your rclone configuration, requests a new access token from Google, and updates the config file safely, with backup and rollback in case of errors. Token validity is verified by running a dry-run sync before finalizing changes.
 
 All scripts are written in Bash for portability. JSON parsing and manipulation are handled with jq. The system is designed to ignore Google Docs files during backup, preventing issues with the Linux filesystem. All configuration and logs are stored in user directories, requiring no root access and keeping your environment clean and secure.
 
