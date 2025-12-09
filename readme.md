@@ -9,6 +9,10 @@
                                     |___/                        
 ```
 
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/thisisnotgcsar/rclone4gdrive/releases)
+[![Build Status](https://img.shields.io/badge/build-manual-lightgrey.svg)](https://github.com/thisisnotgcsar/rclone4gdrive/actions)
+
 # rclone4gdrive <!-- omit in toc -->
 
 Seamless, automated, and transparent two-way Google Drive backup for Linux.
