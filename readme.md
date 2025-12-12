@@ -130,7 +130,7 @@ All scripts are written in Shell for portability. JSON parsing and manipulation 
 - Edit the systemd unit files in `daemons/` to change sync frequency or behavior
 
 ## Contributing
-Pull requests and issues are welcome! Please open an issue for bugs or feature requests.
+Pull requests and issues are welcome! Please, help me in leading this project! Look at CONTRIBUTING.md for how to contribute.
 
 ## Acknowledgements
 rclone4gdrive relies on the following third-party tools and services:
