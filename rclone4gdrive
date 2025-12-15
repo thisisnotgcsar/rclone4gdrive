@@ -4,7 +4,7 @@
 # Purpose: Manage rclone timer/service operations for Google Drive synchronization.
 # Features:
 #   - Provides status and restart commands for rclone systemd units.
-#   - Supports dry-run bisync operations.
+#   - Supports sync (actual bisync) operations.
 #   - Installs and enables systemd user units from the daemons/ directory.
 #   - 'init' command sets up gdrive remote, ensures $HOME/gdrive exists, and copies the script directory for system-wide or user use.
 
@@ -15,7 +15,7 @@ Usage: $0 <command>
 Commands:
   status         Show a compact summary of rclone.timer and the last 10 lines of the rclone.service journal
   restart        Restart rclone.timer and show the updated status
-  dry-run        Run rclone bisync in dry-run mode
+  sync           Run rclone bisync to synchronize your Google Drive and local directory
   sync-daemons   Install service/timer unit files from daemons/ into ~/.config/systemd/user, reload and enable/start them
   init           Initialize gdrive remote, ensure \$HOME/gdrive exists, and copy the script directory for deployment
   help, -h, --help  Show this help message
@@ -52,9 +52,9 @@ restart_cmd() {
   fi
 }
 
-dry_run_cmd() {
-  echo "Running rclone bisync in dry-run mode..."
-  /usr/bin/rclone bisync gdrive: "$HOME/gdrive" --min-size 0 --log-level=ERROR --dry-run
+sync_cmd() {
+  echo "Running rclone bisync (actual sync)..."
+  /usr/bin/rclone bisync gdrive: "$HOME/gdrive" --min-size 0 --progress --log-level=INFO
 }
 
 sync_daemons_cmd() {
@@ -150,8 +150,8 @@ case "$COMMAND" in
     restart_cmd
     ;;
 
-  dry-run)
-    dry_run_cmd
+  sync)
+    sync_cmd
     ;;
 
   sync-daemons)
