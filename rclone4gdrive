@@ -118,7 +118,7 @@ init_cmd() {
   TARGET_BIN="$HOME/bin/"
   mkdir -p "$TARGET_BIN"
   echo "Copying $SCRIPT_DIR to $TARGET_BIN ..."
-  cp -a "$SCRIPT_DIR" "$TARGET_BIN"
+  cp -a "$SCRIPT_DIR"/* "$TARGET_BIN"
 
   BASHRC="$HOME/.bashrc"
   PATH_LINE='export PATH="$HOME/bin/rclone4gdrive:$PATH"'
