@@ -77,7 +77,7 @@ sed -i "/^\[${REMOTE}\]/,/^\[/ s|^token =.*|token = ${NEW_TOKEN}|" "$RCLONE_CONF
 # --- TEST CONFIG WITH DRY-RUN ---
 SCRIPT_DIR=`dirname "$0"`
 # Run a dry-run sync to verify the new token works
-if "$SCRIPT_DIR/rclone4gdrive" dry-run; then
+if "$SCRIPT_DIR/rclone4gdrive" sync; then
   echo "Dry-run succeeded. Configuration updated."
   rm -f "$RCLONE_CONF.bak"
 else
