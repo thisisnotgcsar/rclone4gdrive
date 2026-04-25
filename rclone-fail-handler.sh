@@ -38,7 +38,7 @@ fi
 if echo "$JOURNAL_OUTPUT" | grep -q "Must run --resync to recover."; then
   echo "Detected 'Must run --resync to recover.' in logs. Attempting resync..."
   # Attempt to recover by running rclone with --resync.
-  if /usr/bin/rclone bisync gdrive: "$HOME/gdrive/" --resync --min-size 0 --log-level=ERROR; then
+  if /usr/bin/rclone bisync gdrive: "$HOME/gdrive/" --resync --drive-skip-gdocs --create-empty-src-dirs --log-level=ERROR; then
     restart_services
   else
     echo "rclone --resync failed."

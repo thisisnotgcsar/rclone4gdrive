@@ -54,7 +54,7 @@ restart_cmd() {
 
 sync_cmd() {
   echo "Running rclone bisync (actual sync)..."
-  /usr/bin/rclone bisync gdrive: "$HOME/gdrive" --min-size 0 --progress --log-level=INFO
+  /usr/bin/rclone bisync gdrive: "$HOME/gdrive" --drive-skip-gdocs --create-empty-src-dirs --progress --log-level=INFO
 }
 
 sync_daemons_cmd() {
